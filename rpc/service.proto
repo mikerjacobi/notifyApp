@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package notify;
+import "empty.proto";
+option go_package = "server";
+
+service NotifyApp {
+    rpc CreateAccount(CreateAccountReq) returns (CreateAccountResp);
+    rpc AddUserPrompt(UserPrompt) returns (google.protobuf.Empty);
+    rpc TriggerNotifications(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message User{
+	string phone_number = 1;
+	string password = 2;
+	string name = 3;
+	string birthday = 4;
+	bool verified = 5;
+    string session_id = 6;
+}
+
+message CreateAccountReq {
+    User user = 1;
+	string password_repeat = 2;
+}
+
+message CreateAccountResp{
+    bool success = 1;
+}
+
+message UserPrompt{
+    string prompt_id = 1;
+    string phone_number = 2;
+    string next_prompt_time = 3;
+    string frequency = 4;
+    Prompt prompt = 5;
+}
+
+message Prompt {
+    string prompt_id = 1;
+    string name = 2;
+    string type = 3;
+    string template = 4;
+}
+
+message Communication{
+    string comms_id = 1;
+    string from = 2;
+    string to = 3;
+    string message = 4;
+}
+
+message Journal{
+    string journal_id = 1;
+    string comms_id = 2;
+    string phone_number = 3;
+    string prompt = 4;
+    string entry = 5;
+    string created = 6;
+    string updated = 7;
+}
+
