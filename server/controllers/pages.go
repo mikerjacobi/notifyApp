@@ -181,23 +181,31 @@ func (s *NotifyAppServer) PostUserNotification(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	newPrompt := r.PostForm.Get("new_prompt")
 	up := &pb.UserNotification{
-		NotificationId:       r.PostForm.Get("select_notification"),
 		PhoneNumber:          user.PhoneNumber,
 		Frequency:            r.PostForm.Get("frequency"),
 		NextNotificationTime: r.PostForm.Get("notification_time"),
 	}
 
-	if newPrompt != "" {
-		notification := &pb.Notification{
-			Type:     "prompt",
-			Template: newPrompt,
+	switch r.PostForm.Get("radios") {
+	case "prompt":
+		newPrompt := r.PostForm.Get("new_prompt")
+		if newPrompt != "" {
+			notification := &pb.Notification{Type: "prompt", Template: newPrompt}
+			err = s.insertNotification(r.Context(), s.DB, notification)
+			up.NotificationId = notification.NotificationId
+		} else {
+			up.NotificationId = r.PostForm.Get("select_notification")
+			_, err = s.getNotification(r.Context(), s.DB, up.NotificationId)
 		}
+	case "reminder":
+		notification := &pb.Notification{Type: "reminder", Template: r.PostForm.Get("new_reminder")}
 		err = s.insertNotification(r.Context(), s.DB, notification)
 		up.NotificationId = notification.NotificationId
-	} else {
-		_, err = s.getNotification(r.Context(), s.DB, up.NotificationId)
+	default:
+		logrus.Errorf("invalid notification type: %s", r.PostForm.Get("radios"))
+		renderTemplate(w, r, "error", nil)
+		return
 	}
 	if err != nil {
 		logrus.Errorf("failed to insert/get notification: %s", err)

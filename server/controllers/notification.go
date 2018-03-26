@@ -198,6 +198,14 @@ func (s *NotifyAppServer) updateUserNotification(ctx context.Context, db Databas
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse next notification time")
 	}
+	if notification.Frequency == "" {
+		//notification is not recurring
+		if err := s.deleteUserNotification(ctx, db, notification.PhoneNumber, notification.NotificationId); err != nil {
+			return errors.Wrapf(err, "failed to delete one time notification: %+v", notification)
+		}
+		return nil
+	}
+
 	frequency, err := time.ParseDuration(notification.Frequency)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse frequency")

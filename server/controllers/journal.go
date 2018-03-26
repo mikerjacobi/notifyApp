@@ -10,7 +10,7 @@ import (
 
 func (s *NotifyAppServer) insertJournal(ctx context.Context, db Database, j *pb.Journal) error {
 	stmt, err := db.Prepare(`
-		INSERT INTO journals (journal_id, comms_id, phone_number, notification, entry, created, updated)
+		INSERT INTO journals (journal_id, comms_id, phone_number, title, entry, created, updated)
 		VALUES (?, ?, ?, ?, ?, NOW(6), NOW(6))
 	`)
 	if err != nil {
