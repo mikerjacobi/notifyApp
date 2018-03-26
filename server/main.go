@@ -40,8 +40,8 @@ func main() {
 	router.Put("/journal/:journal_id", c.PutJournal, logMiddleware, c.AuthMiddleware)
 	router.Delete("/journal/:journal_id", c.DeleteJournal, logMiddleware, c.AuthMiddleware)
 	router.Get("/configure", c.GetConfigure, logMiddleware, c.AuthMiddleware)
-	router.Post("/user-prompt", c.PostUserPrompt, logMiddleware, c.AuthMiddleware)
-	router.Post("/user-prompt/:prompt_id/delete", c.DeleteUserPrompt, logMiddleware, c.AuthMiddleware)
+	router.Post("/user-notification", c.PostUserNotification, logMiddleware, c.AuthMiddleware)
+	router.Post("/user-notification/:notification_id/delete", c.DeleteUserNotification, logMiddleware, c.AuthMiddleware)
 	router.Get("/logout", c.Logout, logMiddleware, c.AuthMiddleware)
 
 	//twirp setup

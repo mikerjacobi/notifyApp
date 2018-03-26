@@ -1,0 +1,28 @@
+<html>
+    <head>
+        <style>
+            .body{
+                width: 800px;
+                padding-left: 100px;
+                padding-right: 100px;
+                padding-top: 20px;
+            }
+        </style>
+        <script src="https://rawgit.com/github/fetch/master/fetch.js"></script>
+        <script src="https://rawgit.com/alexei/sprintf.js/master/src/sprintf.js"></script>
+    </head>
+    <body class="body">
+        {{ if .Name }}
+        <div id="header">
+            User:{{.Name}}
+            <a {{if eq .Tab "journal"}}style="font-weight: bold;"{{end}} href="/journal">journal</a>
+            <a {{if eq .Tab "configure"}}style="font-weight: bold;"{{end}} href="/configure">configure</a>
+            <a href="/logout">logout</a>
+        </div>
+        <br/>
+        {{ end }}
+        <div id="content" style="padding-left:10px;">
+        {{template "content" .}}
+        </div>
+    </body>
+</html>

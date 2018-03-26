@@ -6,7 +6,7 @@ option go_package = "server";
 
 service NotifyApp {
     rpc CreateAccount(CreateAccountReq) returns (CreateAccountResp);
-    rpc AddUserPrompt(UserPrompt) returns (google.protobuf.Empty);
+    rpc AddUserNotification(UserNotification) returns (google.protobuf.Empty);
     rpc TriggerNotifications(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
@@ -28,16 +28,16 @@ message CreateAccountResp{
     bool success = 1;
 }
 
-message UserPrompt{
-    string prompt_id = 1;
+message UserNotification{
+    string notification_id = 1;
     string phone_number = 2;
-    string next_prompt_time = 3;
+    string next_notification_time = 3;
     string frequency = 4;
-    Prompt prompt = 5;
+    Notification notification = 5;
 }
 
-message Prompt {
-    string prompt_id = 1;
+message Notification {
+    string notification_id = 1;
     string name = 2;
     string type = 3;
     string template = 4;
@@ -48,13 +48,14 @@ message Communication{
     string from = 2;
     string to = 3;
     string message = 4;
+    string notification_id = 5;
 }
 
 message Journal{
     string journal_id = 1;
     string comms_id = 2;
     string phone_number = 3;
-    string prompt = 4;
+    string title = 4;
     string entry = 5;
     string created = 6;
     string updated = 7;

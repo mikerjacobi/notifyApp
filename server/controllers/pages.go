@@ -116,24 +116,24 @@ func (s *NotifyAppServer) GetConfigure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prompts, err := s.getPrompts(r.Context(), s.DB)
+	notifications, err := s.getNotifications(r.Context(), s.DB)
 	if err != nil {
-		logrus.Errorf("failed to get prompts: %s", err)
+		logrus.Errorf("failed to get notifications: %s", err)
 		renderTemplate(w, r, "error", nil)
 		return
 	}
 
-	userPrompts, err := s.getUserPrompts(r.Context(), s.DB, user.PhoneNumber)
+	userNotifications, err := s.getUserNotifications(r.Context(), s.DB, user.PhoneNumber)
 	if err != nil {
-		logrus.Errorf("failed to get prompts: %s", err)
+		logrus.Errorf("failed to get notifications: %s", err)
 		renderTemplate(w, r, "error", nil)
 		return
 	}
 
 	payload := struct {
-		Prompts     []*pb.Prompt
-		UserPrompts []*pb.UserPrompt
-	}{prompts, userPrompts}
+		Notifications     []*pb.Notification
+		UserNotifications []*pb.UserNotification
+	}{notifications, userNotifications}
 	renderTemplate(w, r, "configure", payload)
 }
 
@@ -166,7 +166,7 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, page string, payload
 	}
 }
 
-func (s *NotifyAppServer) PostUserPrompt(w http.ResponseWriter, r *http.Request) {
+func (s *NotifyAppServer) PostUserNotification(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		logrus.Errorf("failed to parse form: %s", err)
@@ -182,31 +182,31 @@ func (s *NotifyAppServer) PostUserPrompt(w http.ResponseWriter, r *http.Request)
 	}
 
 	newPrompt := r.PostForm.Get("new_prompt")
-	up := &pb.UserPrompt{
-		PromptId:       r.PostForm.Get("select_prompt"),
-		PhoneNumber:    user.PhoneNumber,
-		Frequency:      r.PostForm.Get("frequency"),
-		NextPromptTime: r.PostForm.Get("prompt_time"),
+	up := &pb.UserNotification{
+		NotificationId:       r.PostForm.Get("select_notification"),
+		PhoneNumber:          user.PhoneNumber,
+		Frequency:            r.PostForm.Get("frequency"),
+		NextNotificationTime: r.PostForm.Get("notification_time"),
 	}
 
 	if newPrompt != "" {
-		prompt := &pb.Prompt{
-			Type:     "question",
+		notification := &pb.Notification{
+			Type:     "prompt",
 			Template: newPrompt,
 		}
-		err = s.insertPrompt(r.Context(), s.DB, prompt)
-		up.PromptId = prompt.PromptId
+		err = s.insertNotification(r.Context(), s.DB, notification)
+		up.NotificationId = notification.NotificationId
 	} else {
-		_, err = s.getPrompt(r.Context(), s.DB, up.PromptId)
+		_, err = s.getNotification(r.Context(), s.DB, up.NotificationId)
 	}
 	if err != nil {
-		logrus.Errorf("failed to insert/get prompt: %s", err)
+		logrus.Errorf("failed to insert/get notification: %s", err)
 		renderTemplate(w, r, "error", nil)
 		return
 	}
 
-	if err := s.insertUserPrompt(r.Context(), s.DB, up); err != nil {
-		logrus.Errorf("failed to insert user prompt: %s", err)
+	if err := s.insertUserNotification(r.Context(), s.DB, up); err != nil {
+		logrus.Errorf("failed to insert user notification: %s", err)
 		renderTemplate(w, r, "error", nil)
 		return
 	}
@@ -214,7 +214,7 @@ func (s *NotifyAppServer) PostUserPrompt(w http.ResponseWriter, r *http.Request)
 	http.Redirect(w, r, "/configure", http.StatusFound)
 }
 
-func (s *NotifyAppServer) DeleteUserPrompt(w http.ResponseWriter, r *http.Request) {
+func (s *NotifyAppServer) DeleteUserNotification(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		logrus.Errorf("failed to parse form: %s", err)
@@ -229,9 +229,9 @@ func (s *NotifyAppServer) DeleteUserPrompt(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	promptID := vestigo.Param(r, "prompt_id")
-	if err := s.deleteUserPrompt(r.Context(), s.DB, user.PhoneNumber, promptID); err != nil {
-		logrus.Errorf("failed to deleteuser prompt: %s", err)
+	notificationID := vestigo.Param(r, "notification_id")
+	if err := s.deleteUserNotification(r.Context(), s.DB, user.PhoneNumber, notificationID); err != nil {
+		logrus.Errorf("failed to deleteuser notification: %s", err)
 		renderTemplate(w, r, "error", nil)
 		return
 	}
@@ -256,12 +256,12 @@ func (s *NotifyAppServer) PostJournal(w http.ResponseWriter, r *http.Request) {
 
 	journal := &pb.Journal{
 		PhoneNumber: user.PhoneNumber,
-		Prompt:      r.PostForm.Get("journal_prompt"),
+		Title:       r.PostForm.Get("journal_title"),
 		Entry:       r.PostForm.Get("journal_entry"),
 	}
 
 	if err := s.insertJournal(r.Context(), s.DB, journal); err != nil {
-		logrus.Errorf("failed to insert user prompt: %s", err)
+		logrus.Errorf("failed to insert user notification: %s", err)
 		renderTemplate(w, r, "error", nil)
 		return
 	}

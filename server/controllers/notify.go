@@ -88,8 +88,8 @@ func (s *NotifyAppServer) CreateAccount(ctx context.Context, req *pb.CreateAccou
 		return nil, twirp.InternalError("failed to create account")
 	}
 
-	registerPromptID := "deaabd59-0d15-4f44-a3a8-1e3f920a3710"
-	msg, err := s.populateTemplateByID(ctx, s.DB, registerPromptID, nil)
+	registerNotificationID := "deaabd59-0d15-4f44-a3a8-1e3f920a3710"
+	msg, err := s.populateTemplateByID(ctx, s.DB, registerNotificationID, nil)
 	if err != nil {
 		logrus.Error("failed to populate template: %s", err)
 		return nil, twirp.InternalError("failed to create account")
@@ -194,8 +194,8 @@ func (s *NotifyAppServer) verifyUser(ctx context.Context, user *pb.User) error {
 	}
 
 	payload := &regAckPayload{user.Name}
-	regAckPromptID := "81a36dd3-8301-410c-af35-0b2a87cdd921"
-	msg, err := s.populateTemplateByID(ctx, s.DB, regAckPromptID, payload)
+	regAckNotificationID := "81a36dd3-8301-410c-af35-0b2a87cdd921"
+	msg, err := s.populateTemplateByID(ctx, s.DB, regAckNotificationID, payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to populate regack tmpl")
 	}
@@ -203,7 +203,7 @@ func (s *NotifyAppServer) verifyUser(ctx context.Context, user *pb.User) error {
 	if err := s.sendSMS(ctx, user.PhoneNumber, msg); err != nil {
 		return errors.Wrap(err, "failed to send sms")
 	}
-	comm := &pb.Communication{From: s.config.From, To: user.PhoneNumber, Message: msg}
+	comm := &pb.Communication{From: s.config.From, To: user.PhoneNumber, Message: msg, NotificationId: regAckNotificationID}
 	if err := s.insertCommunication(ctx, s.DB, comm); err != nil {
 		logrus.Warn("failed to insert comms: %s", err)
 	}
@@ -230,32 +230,32 @@ func (s *NotifyAppServer) TriggerNotifications(ctx context.Context, empty *gpb.E
 }
 
 func (s *NotifyAppServer) triggerNotifications(ctx context.Context) error {
-	prompts, err := s.getAllUserPrompts(ctx, s.DB)
+	notifications, err := s.getAllUserNotifications(ctx, s.DB)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get user prompts")
+		return errors.Wrapf(err, "failed to get user notifications")
 	}
 
-	for _, prompt := range prompts {
-		if err := s.handleUserPrompt(ctx, prompt); err != nil {
-			logrus.Warnf("failed to handle user prompt: %+v.  %s", prompt, err)
+	for _, notification := range notifications {
+		if err := s.handleUserNotification(ctx, notification); err != nil {
+			logrus.Warnf("failed to handle user notification: %+v.  %s", notification, err)
 		}
 	}
 	return nil
 }
 
-func (s *NotifyAppServer) handleUserPrompt(ctx context.Context, up *pb.UserPrompt) error {
+func (s *NotifyAppServer) handleUserNotification(ctx context.Context, up *pb.UserNotification) error {
 	txn, err := s.DB.Begin()
 	if err != nil {
 		return errors.Wrap(err, "failed to begin txn")
 	}
 	defer txn.Rollback()
 
-	//update user prompts
-	if err := s.updateUserPrompt(context.Background(), txn, up); err != nil {
-		return errors.Wrap(err, "failed to update user prompt")
+	//update user notifications
+	if err := s.updateUserNotification(context.Background(), txn, up); err != nil {
+		return errors.Wrap(err, "failed to update user notification")
 	}
 
-	msg, err := s.populateTemplate(ctx, s.DB, up.Prompt, nil)
+	msg, err := s.populateTemplate(ctx, s.DB, up.Notification, nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to populate regack tmpl")
 	}
@@ -265,7 +265,7 @@ func (s *NotifyAppServer) handleUserPrompt(ctx context.Context, up *pb.UserPromp
 		return errors.Wrap(err, "failed to send sms")
 	}
 
-	comm := &pb.Communication{From: s.config.From, To: up.PhoneNumber, Message: msg}
+	comm := &pb.Communication{From: s.config.From, To: up.PhoneNumber, Message: msg, NotificationId: up.NotificationId}
 	if err := s.insertCommunication(ctx, txn, comm); err != nil {
 		logrus.Warn("failed to insert comms: %s", err)
 	}
@@ -276,41 +276,43 @@ func (s *NotifyAppServer) insertCommunication(ctx context.Context, db Database, 
 	comm.CommsId = uuid.NewV4().String()
 
 	stmt, err := db.Prepare(`
-		INSERT INTO communications (comms_id, from_phone, to_phone, message, created)
-		VALUES (?, ?, ?, ?, NOW(6))
+		INSERT INTO communications (comms_id, notification_id, from_phone, to_phone, message, created)
+		VALUES (?, ?, ?, ?, ?, NOW(6))
 	`)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare")
 	}
 	from := strings.Replace(comm.From, "+1", "", -1)
 	to := strings.Replace(comm.To, "+1", "", -1)
-	if _, err = stmt.Exec(comm.CommsId, from, to, comm.Message); err != nil {
+	if _, err = stmt.Exec(comm.CommsId, comm.NotificationId, from, to, comm.Message); err != nil {
 		return errors.Wrap(err, "failed to exec")
 	}
 	return nil
 }
 
-func (s *NotifyAppServer) getMostRecentSentCommunication(ctx context.Context, db Database, phoneNumber string) (*pb.Communication, error) {
+func (s *NotifyAppServer) getMostRecentPrompt(ctx context.Context, db Database, phoneNumber string) (string, error) {
 	stmt, err := db.Prepare(`
-		SELECT comms_id,from_phone,to_phone,message
-		FROM communications 
-		WHERE to_phone=?
-		ORDER BY created DESC LIMIT 1`)
+		SELECT n.template
+		FROM communications c, notifications n 
+		WHERE c.to_phone=? 
+		AND c.notification_id = n.notification_id
+		AND n.type="prompt"
+		ORDER BY c.created DESC LIMIT 1`)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare")
+		return "", errors.Wrap(err, "failed to prepare")
 	}
 	rows, err := stmt.Query(phoneNumber)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query")
+		return "", errors.Wrap(err, "failed to query")
 	}
 	defer rows.Close()
 	if !rows.Next() {
-		return nil, fmt.Errorf("sent message not found to %s", phoneNumber)
+		return "", fmt.Errorf("sent message not found to %s", phoneNumber)
 	}
 
-	comms := &pb.Communication{}
-	if err := rows.Scan(&comms.CommsId, &comms.From, &comms.To, &comms.Message); err != nil {
-		return nil, errors.Wrap(err, "failed to scan")
+	notification := &pb.Notification{}
+	if err := rows.Scan(&notification.Template); err != nil {
+		return "", errors.Wrap(err, "failed to scan")
 	}
-	return comms, nil
+	return notification.Template, nil
 }

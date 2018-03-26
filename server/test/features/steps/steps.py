@@ -12,7 +12,7 @@ def clear_test_data(ctx):
     cursor = ctx.db.cursor()
     stmt = "DELETE FROM users WHERE phone_number LIKE '000%'"
     cursor.execute(stmt)
-    stmt = "DELETE FROM user_prompts WHERE phone_number LIKE '000%'"
+    stmt = "DELETE FROM user_notifications WHERE phone_number LIKE '000%'"
     cursor.execute(stmt)
     stmt = "DELETE FROM communications WHERE to_phone LIKE '000%'"
     cursor.execute(stmt)
@@ -83,7 +83,7 @@ def insert_db_data(ctx, table):
 def check_db_data(ctx, table):
     table_keys = {
         "communications": ["comms_id", "from_phone", "to_phone", "message", "created"],
-        "journals": ["journal_id", "comms_id", "phone_number", "prompt", "entry", "created", "updated"],
+        "journals": ["journal_id", "comms_id", "phone_number", "notification", "entry", "created", "updated"],
     }
     want = json.loads(ctx.text)
     stmt = "SELECT %s FROM %s ORDER BY created DESC LIMIT 1"%(",".join(table_keys[table]), table)

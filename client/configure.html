@@ -1,0 +1,69 @@
+{{define "content"}}
+	<script>
+		function handleRadio(){
+			if (document.getElementById("c1").checked){
+    			document.getElementById("notification_input").style.display="";
+    			document.getElementById("reminder_input").style.display="none";
+			} else {
+    			document.getElementById("reminder_input").style.display="";
+    			document.getElementById("notification_input").style.display="none";
+			}
+		}
+	</script>
+
+    <div id="active_notifications">
+        Active Notifications: <br/>
+        <table id="active_notifications_table" style="padding-left:10px;">
+            <tr>
+                <td>Next Notification Time</td>
+                <td>Frequency</td>
+                <td>Message</td>
+                <td>Delete</td>
+            </tr>
+        {{ range $key, $val := .Payload.UserNotifications }}
+            <tr>
+                <td>{{$val.NextNotificationTime}}</td>
+                <td>{{$val.Frequency}}</td>
+                <td>{{$val.Notification.Template}}</td>
+                <td><form id="del-user-notification-{{$key}}" action="/user-notification/{{$val.NotificationId}}/delete" method="post">
+                    <button type="submit"> X </button>
+                </form></td>
+            </tr>
+        {{ end }}
+        </table>
+    </div>
+
+    <br/>
+    
+    <div id="add_notifications">
+        Add Notification: <br/>
+        <form id="add_notification_form" action="/user-notification" method="post" style="padding-left:10px;">
+		    <div>
+		      <input type="radio" id="c1"name="radios" value="prompt" onclick="handleRadio();" checked="checked">
+		      <label for="c1">prompt</label>
+		      <input type="radio" id="c2" name="radios" value="reminder" onclick="handleRadio();" >
+		      <label for="c2">reminder</label>
+		    </div>
+
+            <div id="reminder_input" style="display:none">
+                <input style="width:250px;" type="input" placeholder="new reminder" name="new_reminder" id="new_reminder"/> <br/> <br/> 
+            </div>
+            <div id="notification_input">
+                <select type="select" name="select_notification" id="select_notification"> 
+                {{ range $key, $val := .Payload.Notifications }}
+                    <option value="{{$val.NotificationId}}">{{$val.Template}}</option>
+                {{end}}
+                </select>
+                <br/><label  style="padding-left:100px;"> OR </label><br/>
+                <input style="width:250px;" type="input" placeholder="new prompt" name="new_prompt" id="new_prompt"/> <br/> <br/> 
+            </div>
+
+            <div style="display:table;">
+                <input style="display:table-cell;" type="input" placeholder="frequency" name="frequency" id="frequency"/>
+                <input style="display:table-cell;" type="input" placeholder="first notification time" name="notification_time" id="notification_time"/>
+                eg. 24h 2018-02-04 17:34:13
+            </div>
+            <button type="submit"> Add Notification </button>
+        </form>
+    </div>
+{{end}}

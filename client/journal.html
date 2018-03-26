@@ -1,0 +1,57 @@
+{{define "content"}}
+
+    <script>
+        function editJournal(key, journalID, text){
+            var div = document.getElementById("journal-"+key)
+            div.innerHTML = sprintf('<textarea rows="4" cols="50" id="journal-update-%s">%s</textarea>', key, text);
+            var editBtn = document.getElementById("edit-btn-"+key)
+            editBtn.innerHTML = 'update';
+            editBtn.setAttribute('onClick', sprintf('postJournal("%s","%s")', key, journalID));
+        }
+        function deleteJournal(key, journalID){
+			var url = '/journal/'+journalID;
+			fetch(url, {
+			  method: 'DELETE',
+              credentials: "same-origin"
+			}).then(res => res.json())
+                .catch(error => console.error('Error:', error))
+                .then(response => window.location = "/journal");
+        }
+        function postJournal(key, journalID){
+            var text = document.getElementById("journal-update-"+key).value;
+			var url = '/journal/'+journalID;
+			var data = {entry: text};
+
+			fetch(url, {
+			  method: 'PUT',
+              credentials: "same-origin",
+			  body: JSON.stringify(data), 
+			  headers: new Headers({'Content-Type': 'application/json'})
+			}).then(res => res.json())
+                .catch(error => console.error('Error:', error))
+                .then(response => window.location = "/journal");
+        }
+
+    </script>
+
+    <div id="new-journal">
+        <form id="add_journal_form" action="/journal" method="post" style="padding-left:10px;">
+            <input type="input" placeholder="title" id="journal_title" name="journal_title" style="width: 300;"/> <br/>
+            <textarea rows="4" cols="50" id="journal_entry" name="journal_entry"> </textarea> <br/>
+            <button type="submit"> Submit </button>
+        </form>
+    </div>
+
+    {{ range $key, $val := .Payload.Entries }}
+    <div>
+        <button onclick="deleteJournal({{$key}}, {{$val.JournalId}})">X</button>
+        <strong>{{$val.Updated}}</strong> <i>{{$val.Title}}</i> 
+        <button id="edit-btn-{{$key}}" onclick="editJournal({{$key}}, {{$val.JournalId}}, {{$val.Entry}})">edit</button>
+        <br/> 
+        <div id="journal-{{$key}}" style="padding-left:20px;">
+        {{$val.Entry}}
+        </div>
+    </div>
+    {{ end }}
+
+{{end}}

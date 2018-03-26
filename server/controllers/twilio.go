@@ -103,16 +103,16 @@ func (s *NotifyAppServer) TwilioInboundHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	sent, err := s.getMostRecentSentCommunication(ctx, s.DB, payload.From)
+	prompt, err := s.getMostRecentPrompt(ctx, s.DB, payload.From)
 	if err != nil {
-		logrus.WithFields(lf).Errorf("failed to get last prompt: %s", err)
+		logrus.WithFields(lf).Errorf("failed to get last notification: %s", err)
 		w.WriteHeader(500)
 		return
 	}
 	journal := &pb.Journal{
 		CommsId:     recv.CommsId,
 		PhoneNumber: payload.From,
-		Prompt:      sent.Message,
+		Title:       prompt,
 		Entry:       recv.Message,
 	}
 	if err := s.insertJournal(ctx, s.DB, journal); err != nil {
