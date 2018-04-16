@@ -101,7 +101,7 @@ func (s *NotifyAppServer) validateAddUserNotification(ctx context.Context, req *
 	}
 
 	//parse frequency
-	if _, err := time.ParseDuration(req.Frequency); err != nil {
+	if _, err := parseDuration(req.Frequency); err != nil {
 		return "frequency", errors.Wrapf(err, "frequency '%s' is invalid", req.Frequency)
 	}
 	return "", nil
@@ -206,7 +206,7 @@ func (s *NotifyAppServer) updateUserNotification(ctx context.Context, db Databas
 		return nil
 	}
 
-	frequency, err := time.ParseDuration(notification.Frequency)
+	frequency, err := parseDuration(notification.Frequency)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse frequency")
 	}

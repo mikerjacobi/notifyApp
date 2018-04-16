@@ -213,7 +213,7 @@ func (s *NotifyAppServer) PostUserNotification(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := s.insertUserNotification(r.Context(), s.DB, up); err != nil {
+	if _, err := s.AddUserNotification(r.Context(), up); err != nil {
 		logrus.Errorf("failed to insert user notification: %s", err)
 		renderTemplate(w, r, "error", nil)
 		return

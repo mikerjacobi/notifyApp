@@ -2,8 +2,12 @@ package controllers
 
 import (
 	"database/sql"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,4 +58,19 @@ func now(db Database) time.Time {
 		return time.Now()
 	}
 	return now
+}
+
+func parseDuration(durstr string) (time.Duration, error) {
+	if strings.Contains(durstr, "d") {
+		dint, err := strconv.Atoi(durstr[:len(durstr)-1])
+		if err != nil {
+			return time.Second, errors.Wrap(err, "failed to atoi")
+		}
+		durstr = fmt.Sprintf("%dh", dint*24)
+	}
+	duration, err := time.ParseDuration(durstr)
+	if err != nil {
+		return time.Second, errors.Wrapf(err, "duration '%s' is invalid", durstr)
+	}
+	return duration, nil
 }
